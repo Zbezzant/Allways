@@ -61,6 +61,8 @@ Drawing.SimpleGraph = function(options) {
   this.limit = options.limit || 10;
   this.nodes_count = options.numNodes || 20;
   this.edges_count = options.numEdges || 10;
+  this.label_font_family = options.labelFontFamily || "'OpenDyslexic', 'OpenDyslexic-Regular', 'OpenDyslexicAlta', Arial, sans-serif";
+  this.label_font_size = options.labelFontSize || "40pt";
 
   var camera, controls, scene, renderer, interaction, geometry, object_selection;
   var stats;
@@ -235,9 +237,9 @@ Drawing.SimpleGraph = function(options) {
 
     if(that.show_labels) {
       if(node.data.title !== undefined) {
-        label_object = new THREE.Label(node.data.title);
+        label_object = new THREE.Label(node.data.title, {fontFamily: that.label_font_family, fontSize: that.label_font_size});
       } else {
-        label_object = new THREE.Label(node.id);
+        label_object = new THREE.Label(node.id, {fontFamily: that.label_font_family, fontSize: that.label_font_size});
       }
       node.data.label_object = label_object;
       scene.add( node.data.label_object );
@@ -342,9 +344,9 @@ Drawing.SimpleGraph = function(options) {
             } else {
                 var label_object;
                 if (node.data.title !== undefined) {
-                    label_object = new THREE.Label(node.data.title, node.data.draw_object);
+                    label_object = new THREE.Label(node.data.title, {fontFamily: that.label_font_family, fontSize: that.label_font_size});
                 } else {
-                    label_object = new THREE.Label(node.id, node.data.draw_object);
+                    label_object = new THREE.Label(node.id, {fontFamily: that.label_font_family, fontSize: that.label_font_size});
                 }
                 node.data.label_object = label_object;
                 scene.add(node.data.label_object);

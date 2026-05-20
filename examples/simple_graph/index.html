@@ -1,16 +1,3 @@
-<!--
-  This is an example html file with some options added. The minimum html file for
-  the graph visualization is:
-  <!DOCTYPE html>
-  <html>
-    <head>
-      <title>Graph Visualization</title>
-      <script type="text/javascript" src="build/graph.min.js"></script>
-    </head>
-    <body onload="new Drawing.SimpleGraph({layout: '3d', showStats: true, showInfo: true})">
-    </body>
-  </html>
--->
 <!DOCTYPE html>
 <html>
 <head>
@@ -19,36 +6,119 @@
     <script type="text/javascript" src="../../build/graph.min.js"></script>
     <script type="text/javascript" src="simple_graph.js"></script>
 
-    <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/opendyslexic">
-
-
     <script type="text/javascript">
         var drawing;
+
+        function installLabelOverride(defaultFontFamily, defaultFontSize) {
+            THREE.Label = function(text, parameters) {
+                parameters = parameters || {};
+                var labelCanvas = document.createElement("canvas");
+                var xc = labelCanvas.getContext("2d");
+                var fontsize = parameters.fontSize || defaultFontSize;
+                var fontFamily = parameters.fontFamily || defaultFontFamily;
+                var padding = 2;
+                var geometry = new THREE.BoxGeometry(1, 1, 0);
+                var texture = new THREE.CanvasTexture(
+                    labelCanvas,
+                    THREE.UVMapping,
+                    THREE.ClampToEdgeWrapping,
+                    THREE.ClampToEdgeWrapping,
+                    THREE.LinearFilter,
+                    THREE.LinearFilter
+                );
+                var material = new THREE.MeshBasicMaterial({map: texture, transparent: true});
+                var mesh = new THREE.Mesh(geometry, material);
+
+                function redraw() {
+                    xc.font = fontsize + " " + fontFamily;
+                    var textWidth = xc.measureText(text).width;
+                    var cw = Math.ceil(textWidth) + padding * 2;
+                    var ch = 60;
+                    labelCanvas.setAttribute("width", cw);
+                    labelCanvas.setAttribute("height", ch);
+                    xc.font = fontsize + " " + fontFamily;
+                    xc.textBaseline = "middle";
+                    var r = 20;
+                    xc.fillStyle = "white";
+                    xc.beginPath();
+                    xc.moveTo(r, 0);
+                    xc.lineTo(cw - r, 0);
+                    xc.quadraticCurveTo(cw, 0, cw, r);
+                    xc.lineTo(cw, ch - r);
+                    xc.quadraticCurveTo(cw, ch, cw - r, ch);
+                    xc.lineTo(r, ch);
+                    xc.quadraticCurveTo(0, ch, 0, ch - r);
+                    xc.lineTo(0, r);
+                    xc.quadraticCurveTo(0, 0, r, 0);
+                    xc.closePath();
+                    xc.fill();
+                    xc.fillStyle = "black";
+                    xc.fillText(text, padding, ch / 2);
+                    mesh.geometry.dispose();
+                    mesh.geometry = new THREE.BoxGeometry(cw, ch, 0);
+                    texture.needsUpdate = true;
+                }
+
+                redraw();
+                if (document.fonts) {
+                    document.fonts.load("normal 400 54px 'OpenDyslexicCanvas'").then(function() {
+                        redraw();
+                    });
+                }
+                return mesh;
+            };
+        }
+
+        function loadLabelFont(familyName) {
+            if (!window.FontFace || !document.fonts) {
+                return Promise.resolve();
+            }
+            var source = {url: "https://cdn.jsdelivr.net/gh/madjeek-web/open-dyslexic@main/OpenDyslexic-2025/opendyslexic-regular-webfont.woff2", format: "woff2"};
+            var face = new FontFace(familyName, "url('" + source.url + "') format('" + source.format + "')", {style: "normal", weight: "400"});
+            return face.load().then(function(loadedFace) {
+                document.fonts.add(loadedFace);
+                return document.fonts.load("normal 400 54px '" + familyName + "'");
+            }).then(function() {
+                return document.fonts.ready;
+            });
+        }
+
         function createDrawing() {
-            document.fonts.load('40pt OpenDyslexic').then(function() {
+            var labelFontFamilyName = "OpenDyslexicCanvas";
+            var labelFontFamily = "'" + labelFontFamilyName + "'";
+            var labelFontSize = "40pt";
+
+            function startGraph() {
+                installLabelOverride(labelFontFamily, labelFontSize);
                 drawing = new Drawing.SimpleGraph({
-                    layout: '3d',
+                    layout: "3d",
                     selection: true,
                     numNodes: 50,
                     graphLayout: {attraction: 5, repulsion: 0.5},
                     showStats: true,
-                    showInfo: true
+                    showInfo: true,
+                    labelFontFamily: labelFontFamily,
+                    labelFontSize: labelFontSize
                 });
-            }).catch(function(err) {
-                console.warn('OpenDyslexic failed to load, falling back to Arial:', err);
-                drawing = new Drawing.SimpleGraph({
-                    layout: '3d',
-                    selection: true,
-                    numNodes: 50,
-                    graphLayout: {attraction: 5, repulsion: 0.5},
-                    showStats: true,
-                    showInfo: true
-                });
+            }
+
+            loadLabelFont(labelFontFamilyName).then(function() {
+                startGraph();
+            }).catch(function() {
+                startGraph();
             });
         }
     </script>
 
     <style type="text/css">
+        @font-face {
+            font-family: 'OpenDyslexicCanvas';
+            src: url('https://fonts.cdnfonts.com/s/19808/OpenDyslexic-Regular.woff') format('woff'),
+                 url('https://cdn.jsdelivr.net/gh/madjeek-web/open-dyslexic@main/OpenDyslexic-2025/opendyslexic-regular-webfont.woff2') format('woff2'),
+                 url('https://cdn.jsdelivr.net/gh/madjeek-web/open-dyslexic@main/OpenDyslexic-2025/opendyslexic-regular-webfont.woff') format('woff');
+            font-style: normal;
+            font-weight: 400;
+        }
         body {
             margin: 0;
             padding: 0;
@@ -56,7 +126,7 @@
             overflow: hidden;
         }
         #options, #options label, #options input, #options button {
-            font-family: 'OpenDyslexic', 'OpenDyslexicAlta', Arial, sans-serif;
+            font-family: 'OpenDyslexicCanvas', Arial, sans-serif;
         }
         #graph-info {
             position: absolute;

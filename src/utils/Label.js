@@ -5,7 +5,7 @@ THREE.Label = function(text, parameters) {
     function create() {
         var xc = labelCanvas.getContext("2d");
         var fontsize = parameters.fontSize || "40pt";
-        var fontFamily = parameters.fontFamily || "'OpenDyslexic', 'OpenDyslexicAlta', Arial, sans-serif";
+        var fontFamily = parameters.fontFamily || "'OpenDyslexic', 'OpenDyslexic-Regular', 'OpenDyslexicAlta', Arial, sans-serif";
         var padding = 2;
 
         xc.font = fontsize + " " + fontFamily;
