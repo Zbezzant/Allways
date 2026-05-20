@@ -36,9 +36,6 @@
 
     limit: <int>, maximum number of nodes
 
-    numNodes: <int> - sets the number of nodes to create.
-    numEdges: <int> - sets the maximum number of edges for a node. A node will have
-              1 to numEdges edges, this is set randomly.
   }
 
 
@@ -56,11 +53,9 @@ Drawing.SimpleGraph = function(options) {
   this.layout_options = options.graphLayout || {};
   this.show_stats = options.showStats || false;
   this.show_info = options.showInfo || false;
-  this.show_labels = options.showLabels || false;
+  this.show_labels = options.showLabels || true;
   this.selection = options.selection || false;
   this.limit = options.limit || 10;
-  this.nodes_count = options.numNodes || 20;
-  this.edges_count = options.numEdges || 10;
   this.label_font_family = options.labelFontFamily || "'OpenDyslexic', 'OpenDyslexic-Regular', 'OpenDyslexicAlta', Arial, sans-serif";
   this.label_font_size = options.labelFontSize || "40pt";
 
@@ -92,8 +87,8 @@ Drawing.SimpleGraph = function(options) {
     controls = new THREE.TrackballControls(camera);
 
     controls.rotateSpeed = 0.5;
-    controls.zoomSpeed = 2.2;
-    controls.panSpeed = 1;
+    controls.zoomSpeed = 0.8;
+    controls.panSpeed = 0.3;
 
     controls.noZoom = false;
     controls.noPan = false;
@@ -136,6 +131,34 @@ Drawing.SimpleGraph = function(options) {
           }
       });
 
+      var _mouseDownX = 0, _mouseDownY = 0, _wasDragged = false;
+      var DRAG_THRESHOLD = 5;
+
+      renderer.domElement.addEventListener('mousedown', function(e) {
+          _mouseDownX = e.clientX;
+          _mouseDownY = e.clientY;
+          _wasDragged = false;
+      }, true);
+
+      renderer.domElement.addEventListener('mousemove', function(e) {
+          var dx = e.clientX - _mouseDownX;
+          var dy = e.clientY - _mouseDownY;
+          if (Math.sqrt(dx*dx + dy*dy) > DRAG_THRESHOLD) {
+              _wasDragged = true;
+          }
+      }, true);
+
+      renderer.domElement.addEventListener('click', function(e) {
+          if (_wasDragged) e.stopImmediatePropagation();
+      }, true);
+
+      renderer.domElement.addEventListener('contextmenu', function(e) {
+          e.preventDefault();
+          if (_wasDragged) e.stopImmediatePropagation();
+      }, true);
+
+
+
     document.body.appendChild( renderer.domElement );
 
     // Stats.js
@@ -165,43 +188,25 @@ Drawing.SimpleGraph = function(options) {
    *  numNodes and numEdges.
    */
   function createGraph() {
+      var node = new GRAPHVIS.Node(0);
+      node.data.title = "Start";
+      graph.addNode(node);
+      drawNode(node);
 
-    var node = new GRAPHVIS.Node(0);
-    node.data.title = "This is node " + node.id;
-    graph.addNode(node);
-    drawNode(node);
+      // Pin it to world center
+      node.position.x = 0;
+      node.position.y = 0;
+      node.position.z = 0;
+      node.data.draw_object.position.set(0, 0, 0);
 
-    var nodes = [];
-    nodes.push(node);
-
-    var steps = 1;
-    while(nodes.length !== 0 && steps < that.nodes_count) {
-      node = nodes.shift();
-
-      var numEdges = randomFromTo(1, that.edges_count);
-      for(var i=1; i <= numEdges; i++) {
-        var target_node = new GRAPHVIS.Node(i*steps);
-        if(graph.addNode(target_node)) {
-          target_node.data.title = "This is node " + target_node.id;
-
-          drawNode(target_node);
-          nodes.push(target_node);
-          if(graph.addEdge(node, target_node)) {
-            drawEdge(node, target_node);
-          }
-        }
-      }
-      steps++;
-    }
-
-    that.layout_options.width = that.layout_options.width || 2000;
-    that.layout_options.height = that.layout_options.height || 2000;
-    that.layout_options.iterations = that.layout_options.iterations || 100000;
-    that.layout_options.layout = that.layout_options.layout || that.layout;
-    graph.layout = new Layout.ForceDirected(graph, that.layout_options);
-    graph.layout.init();
-    info_text.nodes = "Nodes " + graph.nodes.length;
-    info_text.edges = "Edges " + graph.edges.length;
+      that.layout_options.width = that.layout_options.width || 2000;
+      that.layout_options.height = that.layout_options.height || 2000;
+      that.layout_options.iterations = that.layout_options.iterations || 100000;
+      that.layout_options.layout = that.layout_options.layout || that.layout;
+      graph.layout = new Layout.ForceDirected(graph, that.layout_options);
+      graph.layout.init();
+      info_text.nodes = "Nodes " + graph.nodes.length;
+      info_text.edges = "Edges " + graph.edges.length;
   }
 
   /**
@@ -215,10 +220,11 @@ Drawing.SimpleGraph = function(options) {
 
       drawNode(newNode);
       // Spawn it near the parent so the layout has a sensible starting point
-      newNode.position.x = sourceNode.position.x;
-      newNode.position.y = sourceNode.position.y;
+      var jitter = 500;
+      newNode.position.x = sourceNode.position.x + (Math.random() - 0.5) * jitter;
+      newNode.position.y = sourceNode.position.y + (Math.random() - 0.5) * jitter;
       if(that.layout === "3d") {
-          newNode.position.z = sourceNode.position.z;
+          newNode.position.z = sourceNode.position.z + (Math.random() - 0.5) * jitter;
       }
 
 
@@ -227,7 +233,7 @@ Drawing.SimpleGraph = function(options) {
       }
 
       // Wake the layout back up so it repositions everyone
-      graph.layout.finished = false;
+      graph.layout = new Layout.ForceDirected(graph, that.layout_options);
       graph.layout.init();
 
       info_text.nodes = "Nodes " + graph.nodes.length;

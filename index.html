@@ -1,100 +1,428 @@
 <!DOCTYPE html>
 <html>
-  <head>
+<head>
     <meta charset="utf-8">
-    <title>Graph Visualization</title>
+    <title>Allways</title>
+    <script type="text/javascript" src="build/graph.min.js"></script>
+    <script type="text/javascript" src="examples/graph/graph.js"></script>
+    <script type="text/javascript">
+        var drawing;
 
-    <style type="text/css">
-      body {
-        margin: 0;
-        padding: 0;
-        font: 14px monospace;
-        overflow: hidden;
-      }
+        function installLabelOverride(defaultFontFamily, defaultFontSize) {
+            THREE.Label = function(text, parameters) {
+                parameters = parameters || {};
+                var labelCanvas = document.createElement("canvas");
+                var xc = labelCanvas.getContext("2d");
+                var fontsize = parameters.fontSize || defaultFontSize;
+                var fontFamily = parameters.fontFamily || defaultFontFamily;
+                var padding = 2;
+                var topOffset = 6;
+                var geometry = new THREE.BoxGeometry(1, 1, 0);
+                var texture = new THREE.CanvasTexture(labelCanvas, THREE.UVMapping,
+                    THREE.ClampToEdgeWrapping, THREE.ClampToEdgeWrapping,
+                    THREE.LinearFilter, THREE.LinearFilter);
+                var material = new THREE.MeshBasicMaterial({map: texture, transparent: true});
+                var mesh = new THREE.Mesh(geometry, material);
+                function redraw() {
+                    xc.font = fontsize + " " + fontFamily;
+                    var textWidth = xc.measureText(text).width;
+                    var cw = Math.ceil(textWidth) + padding * 2;
+                    var ch = 60;
+                    labelCanvas.setAttribute("width", cw);
+                    labelCanvas.setAttribute("height", ch);
+                    xc.font = fontsize + " " + fontFamily;
+                    xc.textBaseline = "middle";
+                    var r = 20;
+                    xc.fillStyle = "white";
+                    xc.beginPath();
+                    xc.moveTo(r, 0); xc.lineTo(cw - r, 0);
+                    xc.quadraticCurveTo(cw, 0, cw, r);
+                    xc.lineTo(cw, ch - r);
+                    xc.quadraticCurveTo(cw, ch, cw - r, ch);
+                    xc.lineTo(r, ch);
+                    xc.quadraticCurveTo(0, ch, 0, ch - r);
+                    xc.lineTo(0, r);
+                    xc.quadraticCurveTo(0, 0, r, 0);
+                    xc.closePath();
+                    xc.fill();
+                    xc.fillStyle = "black";
+                    xc.fillText(text, padding, ch / 2 + topOffset);
+                    mesh.geometry.dispose();
+                    mesh.geometry = new THREE.BoxGeometry(cw, ch, 0);
+                    texture.needsUpdate = true;
+                }
+                redraw();
+                if (document.fonts) {
+                    document.fonts.load("normal 400 54px 'OpenDyslexicCanvas'").then(function() { redraw(); });
+                }
+                return mesh;
+            };
+        }
 
-      h1 {
-        font-size: 20px;
-      }
+        function loadLabelFont(familyName) {
+            if (!window.FontFace || !document.fonts) return Promise.resolve();
+            var face = new FontFace(familyName,
+                "url('https://cdn.jsdelivr.net/gh/madjeek-web/open-dyslexic@main/OpenDyslexic-2025/opendyslexic-regular-webfont.woff2') format('woff2')",
+                {style: "normal", weight: "400"});
+            return face.load().then(function(f) {
+                document.fonts.add(f);
+                return document.fonts.ready;
+            });
+        }
 
-      h2 {
-        font-size: 16px;
-      }
-
-      a {
-        text-decoration: none;
-        color: #4285C2;
-      }
-
-      a:hover {
-        text-decoration: underline;
-      }
-
-      .sidebar {
-        position: fixed;
-        left: 0;
-        width: 20%;
-        height: 100%;
-        background-color: #f0f0f0;
-      }
-
-      .sidebar section {
-        padding: 10px 20px;
-      }
-
-      #viewer {
-        position: absolute;
-        left: 20%;
-        width: 79%;
-        height: 100%;
-        overflow: auto;
-        border: 0;
-      }
-    </style>
-  </head>
-  <body onload="loadExample()">
-    <div id="content">
-      <aside class="sidebar">
-        <section>
-          <h1>Graph Visualization</h1>
-        </section>
-
-        <section id="links">
-          <div>
-            <a href="https://github.com/davidpiegza/Graph-Visualization">source code</a>
-          <div>
-
-          <div>
-            <a href="https://github.com/davidpiegza/Graph-Visualization#contribution">contribution</a>
-          </div>
-        </section>
-
-        <section id="examples">
-          <h2>examples</h2>
-
-          <div>
-            <a href="examples/simple_graph/index.html" target="viewer">simple graph</a>
-          </div>
-
-          <div>
-            <a href="examples/sphere_graph/index.html" target="viewer">sphere graph</a>
-          </div>
-
-          <br />
-
-          <div>
-            <a href="https://github.com/davidpiegza/Graph-Visualization#contribution">add more examples</a>
-          </div>
-        </section>
-      </aside>
-
-      <iframe id="viewer" name="viewer" allowfullscreen allowvr onmousewheel=""></iframe>
-    </div>
-
-    <script>
-      function loadExample() {
-        var viewer = document.getElementById('viewer');
-        viewer.src = 'examples/simple_graph/index.html'
-      }
+        function createDrawing() {
+            var labelFontFamilyName = "OpenDyslexicCanvas";
+            var labelFontFamily = "'" + labelFontFamilyName + "'";
+            var labelFontSize = "40pt";
+            function startGraph() {
+                installLabelOverride(labelFontFamily, labelFontSize);
+                drawing = new Drawing.SimpleGraph({
+                    layout: "3d",
+                    selection: true,
+                    numNodes: 1,
+                    graphLayout: {attraction: 5, repulsion: 0.5},
+                    showStats: false,
+                    showInfo: false,
+                    labelFontFamily: labelFontFamily,
+                    labelFontSize: labelFontSize
+                });
+                // Push canvas right of panel
+                drawing.renderer && (drawing.renderer.domElement.style.marginLeft = '220px');
+            }
+            loadLabelFont(labelFontFamilyName).then(startGraph).catch(startGraph);
+        }
     </script>
-  </body>
+    <style>
+        @font-face {
+            font-family: 'OpenDyslexicCanvas';
+            src: url('https://cdn.jsdelivr.net/gh/madjeek-web/open-dyslexic@main/OpenDyslexic-2025/opendyslexic-regular-webfont.woff2') format('woff2');
+            font-style: normal; font-weight: 400;
+        }
+    </style>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'OpenDyslexicCanvas', Arial;
+            background: #ffffff;
+            color: #424242;
+            overflow: hidden;
+        }
+
+        #left-panel {
+            position: fixed;
+            left: 0; top: 0; bottom: 0;
+            width: 220px;
+            background: #E1E1E1;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+            padding: 10px;
+        }
+
+        #projects-section {
+            /* top portion — projects list */
+        }
+
+        #panel-bottom {
+            flex: 1;
+            /* reserved for later */
+        }
+
+        #projects-header {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: #424242;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        #project-list {
+            list-style: none;
+        }
+
+        .project-item {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            padding: 4px 0;
+            border-bottom: 1px solid #1f1f30;
+        }
+
+        .project-name {
+            flex: 1;
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: pointer;
+            padding: 1px 2px;
+        }
+
+        .project-name-input {
+            flex: 1;
+            font-family: 'OpenDyslexicCanvas', Arial;
+            background: #6B6B6B;
+            color: #fff;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 12px;
+            min-width: 0;
+        }
+
+        .btn-small {
+            flex-shrink: 0;
+            padding: 2px 5px;
+            font-size: 10px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            line-height: 1.4;
+        }
+
+        .btn-rename { background: #424242; color: #E1E1E1; }
+        .btn-rename:hover { background: #0884F7; color: #E1E1E1; }
+
+        .btn-save { background: #0884F7; color: #E1E1E1; }
+        .btn-save:hover { background: #4BC17E; }
+
+        .btn-delete { background: #424242; color: #E1E1E1; }
+        .btn-delete:hover { background: #B00020; color: #E1E1E1; }
+
+        #add-project-btn {
+            margin-top: 8px;
+            font-family: 'OpenDyslexicCanvas', Arial;
+            width: 100%;
+            padding: 5px;
+            background: transparent;
+            border: 1px dashed #424242;
+            color: #424242;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: border-color 0.15s, color 0.15s;
+        }
+        #add-project-btn:hover { border-color: #0884F7; color: #0884F7; }
+
+        /* Confirm popup */
+        #confirm-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        #confirm-popup {
+            background: #E1E1E1;
+            border: 1px solid #949494;
+            border-radius: 8px;
+            padding: 20px 24px;
+            width: 280px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+        }
+        #confirm-popup p { font-size: 13px; color: #424242; margin-bottom: 16px; line-height: 1.5; }
+        #confirm-popup strong { color: #424242; }
+        #confirm-buttons { display: flex; justify-content: center; gap: 10px; }
+        #confirm-cancel { padding: 6px 14px; font-family: 'OpenDyslexicCanvas', Arial; background: transparent; border: 1px solid #424242; color: #6B6B6B; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        #confirm-cancel:hover { color: #E1E1E1; border-color: #E1E1E1; background: #424242; }
+        #confirm-ok { padding: 6px 14px; font-family: 'OpenDyslexicCanvas', Arial; background: #B00020; border: none; color: #E1E1E1; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        #confirm-ok:hover { background: #424242; color: #E1E1E1; }
+
+        /* Graph canvas sits to the right of panel */
+        canvas { display: block; }
+
+        #options {
+            position: fixed;
+            top: 0; right: 0;
+            z-index: 10;
+            padding: 6px 10px;
+            font-family: 'OpenDyslexicCanvas', Arial, sans-serif;
+            font-size: 11px;
+            color: #eee;
+        }
+        #options label { cursor: pointer; }
+
+        #edit-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        #edit-popup {
+            font-family: 'OpenDyslexicCanvas', Arial;
+            background: #E1E1E1;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 24px;
+            width: 360px;
+            color: #eee;
+            font-family: Arial, sans-serif;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+        #edit-popup h3 { margin: 0 0 16px; font-size: 16px; color: #424242; }
+        #edit-popup label { display: block; margin-bottom: 6px; font-size: 13px; color: #424242; }
+        #edit-popup input, #edit-popup textarea {
+            width: 100%; box-sizing: border-box;
+            background: #fff; border: 1px solid #fff; color: #424242;
+            padding: 8px; border-radius: 4px; font-size: 14px; margin-bottom: 14px;
+        }
+        #edit-popup textarea { resize: vertical; }
+        #edit-buttons { display: flex; justify-content: flex-end; gap: 10px; }
+        #edit-cancel {
+            padding: 8px 16px; border: 1px solid #424242;
+            background: transparent; color: #424242; border-radius: 4px; cursor: pointer;
+        }
+        #edit-save {
+            padding: 8px 16px; border: none;
+            background: #0884F7; color: #fff; border-radius: 4px; cursor: pointer;
+        }
+    </style>
+</head>
+<body onload="createDrawing()">
+
+<div id="options">
+    <input type="checkbox" id="show_labels" onclick="if(drawing) drawing.show_labels = this.checked;">
+    <label for="show_labels">Show labels</label>
+</div>
+
+<div id="edit-overlay">
+    <div id="edit-popup">
+        <h3>Edit Node</h3>
+        <label for="edit-label">Label</label>
+        <input id="edit-label" type="text" />
+        <label for="edit-description">Description</label>
+        <textarea id="edit-description" rows="4"></textarea>
+        <div id="edit-buttons">
+            <button id="edit-cancel">Cancel</button>
+            <button id="edit-save">Save</button>
+        </div>
+    </div>
+</div>
+
+<div id="left-panel">
+    <div id="projects-section">
+        <div id="projects-header">Projects</div>
+        <ul id="project-list"></ul>
+        <button id="add-project-btn">+ Add Project</button>
+    </div>
+    <div id="panel-bottom"></div>
+</div>
+
+<div id="confirm-overlay">
+    <div id="confirm-popup">
+        <p>Delete <strong id="confirm-name"></strong>?<br>This cannot be undone.</p>
+        <div id="confirm-buttons">
+            <button id="confirm-cancel">Cancel</button>
+            <button id="confirm-ok">Delete</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const STORAGE_KEY = 'allways_projects';
+
+    function loadProjects() {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) return JSON.parse(raw);
+        const defaults = [{ id: 'default', name: 'Default Project' }];
+        saveProjects(defaults);
+        return defaults;
+    }
+
+    function saveProjects(projects) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+    }
+
+    function renderProjects() {
+        const projects = loadProjects();
+        const list = document.getElementById('project-list');
+        list.innerHTML = '';
+        projects.forEach(p => {
+            const li = document.createElement('li');
+            li.className = 'project-item';
+            li.dataset.id = p.id;
+            li.innerHTML = `
+      <span class="project-name" title="${p.name}">${p.name}</span>
+      <button class="btn-small btn-rename">✎</button>
+      <button class="btn-small btn-delete">✕</button>
+    `;
+            li.querySelector('.btn-rename').addEventListener('click', () => startRename(li, p));
+            li.querySelector('.btn-delete').addEventListener('click', () => confirmDelete(p));
+            list.appendChild(li);
+        });
+    }
+
+    function startRename(li, project) {
+        const nameSpan = li.querySelector('.project-name');
+        const renameBtn = li.querySelector('.btn-rename');
+
+        const input = document.createElement('input');
+        input.className = 'project-name-input';
+        input.value = project.name;
+
+        const saveBtn = document.createElement('button');
+        saveBtn.className = 'btn-small btn-save';
+        saveBtn.textContent = '✓';
+
+        nameSpan.replaceWith(input);
+        renameBtn.replaceWith(saveBtn);
+        input.focus();
+        input.select();
+
+        function doSave() {
+            const newName = input.value.trim() || project.name;
+            const projects = loadProjects();
+            const found = projects.find(p => p.id === project.id);
+            if (found) found.name = newName;
+            saveProjects(projects);
+            renderProjects();
+        }
+
+        saveBtn.addEventListener('click', doSave);
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter') doSave();
+            if (e.key === 'Escape') renderProjects();
+        });
+    }
+
+    let pendingDeleteId = null;
+
+    function confirmDelete(project) {
+        pendingDeleteId = project.id;
+        document.getElementById('confirm-name').textContent = project.name;
+        document.getElementById('confirm-overlay').style.display = 'flex';
+    }
+
+    document.getElementById('confirm-cancel').addEventListener('click', () => {
+        pendingDeleteId = null;
+        document.getElementById('confirm-overlay').style.display = 'none';
+    });
+
+    document.getElementById('confirm-ok').addEventListener('click', () => {
+        if (pendingDeleteId) {
+            let projects = loadProjects().filter(p => p.id !== pendingDeleteId);
+            saveProjects(projects);
+            pendingDeleteId = null;
+            renderProjects();
+        }
+        document.getElementById('confirm-overlay').style.display = 'none';
+    });
+
+    document.getElementById('add-project-btn').addEventListener('click', () => {
+        const projects = loadProjects();
+        const newProject = { id: 'proj_' + Date.now(), name: 'New Project' };
+        projects.push(newProject);
+        saveProjects(projects);
+        renderProjects();
+        const newLi = document.getElementById('project-list').lastElementChild;
+        startRename(newLi, newProject);
+    });
+
+    renderProjects();
+</script>
+</body>
 </html>
