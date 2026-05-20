@@ -68,8 +68,8 @@ Drawing.SimpleGraph = function(options) {
   var stats;
   var info_text = {};
   var graph = new GRAPHVIS.Graph({limit: options.limit});
-  var nodeMap = {};      // THREE mesh.id  →  GRAPHVIS.Node
   var nextNodeId = 9999; // start high to avoid collisions with createGraph()
+  var editingNode = null;
 
   var geometries = [];
 
@@ -129,6 +129,10 @@ Drawing.SimpleGraph = function(options) {
               if(sourceNode) {          // ignore clicks on labels/edges
                   addNodeToGraph(sourceNode);
               }
+          },
+          rightClicked: function(obj) {
+              var node = obj._graphNode;
+              if(node) showEditPopup(node);
           }
       });
 
@@ -150,6 +154,8 @@ Drawing.SimpleGraph = function(options) {
       info.setAttributeNode(id_attr);
       document.body.appendChild( info );
     }
+
+      createEditPopup();
   }
 
 
@@ -376,6 +382,60 @@ Drawing.SimpleGraph = function(options) {
     // render scene
     renderer.render( scene, camera );
   }
+
+    function createEditPopup() {
+        document.getElementById('edit-overlay').addEventListener('click', function(e) {
+            if(e.target === this) closeEditPopup();
+        });
+        document.getElementById('edit-cancel').addEventListener('click', closeEditPopup);
+        document.getElementById('edit-save').addEventListener('click', saveEditPopup);
+        document.getElementById('edit-label').addEventListener('keydown', function(e) {
+            if(e.key === 'Enter') saveEditPopup();
+            if(e.key === 'Escape') closeEditPopup();
+        });
+        document.getElementById('edit-description').addEventListener('keydown', function(e) {
+            if(e.key === 'Escape') closeEditPopup();
+        });
+    }
+
+
+    function showEditPopup(node) {
+        editingNode = node;
+        document.getElementById('edit-label').value = node.data.title || node.id;
+        document.getElementById('edit-description').value = node.data.description || '';
+        document.getElementById('edit-overlay').style.display = 'flex';
+        document.getElementById('edit-label').focus();
+        document.getElementById('edit-label').select();
+    }
+
+    function closeEditPopup() {
+        editingNode = null;
+        document.getElementById('edit-overlay').style.display = 'none';
+    }
+
+    function saveEditPopup() {
+        if(!editingNode) return;
+        var newLabel = document.getElementById('edit-label').value.trim() || String(editingNode.id);
+        editingNode.data.description = document.getElementById('edit-description').value;
+        updateNodeLabel(editingNode, newLabel);
+        closeEditPopup();
+    }
+
+    function updateNodeLabel(node, newTitle) {
+        if(node.data.label_object) {
+            scene.remove(node.data.label_object);
+            node.data.label_object = null;
+        }
+
+        node.data.title = newTitle;
+
+        if(that.show_labels) {
+            var label_object = new THREE.Label(newTitle, {fontFamily: that.label_font_family, fontSize: that.label_font_size});
+            label_object._graphNode = node;
+            node.data.label_object = label_object;
+            scene.add(label_object);
+        }
+    }
 
   /**
    *  Prints info from the attribute info_text.

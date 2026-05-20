@@ -22,6 +22,7 @@ THREE.ObjectSelection = function(parameters) {
 
   var callbackSelected = parameters.selected;
   var callbackClicked = parameters.clicked;
+  var callbackRightClicked = parameters.rightClicked;
   var mouse = { x: 0, y: 0 };
 
   this.domElement.addEventListener( 'mousemove', onDocumentMouseMove, false );
@@ -37,6 +38,18 @@ THREE.ObjectSelection = function(parameters) {
         callbackClicked(_this.INTERSECTED);
       }
     }
+  }
+
+
+  this.domElement.addEventListener('contextmenu', onDocumentMouseRightClick, false);
+
+  function onDocumentMouseRightClick(event) {
+      event.preventDefault(); // suppress browser context menu
+      if(_this.INTERSECTED) {
+          if(typeof callbackRightClicked === 'function') {
+              callbackRightClicked(_this.INTERSECTED);
+          }
+      }
   }
 
   this.render = function(scene, camera) {

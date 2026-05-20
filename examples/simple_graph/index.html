@@ -144,8 +144,58 @@
             right: 0;
             z-index: 10;
         }
+        #edit-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.55);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        #edit-popup {
+            background: #1a1a2e;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 24px;
+            width: 360px;
+            color: #eee;
+            font-family: Arial, sans-serif;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+        }
+        #edit-popup h3 { margin: 0 0 16px; font-size: 16px; color: #fff; }
+        #edit-popup label { display: block; margin-bottom: 6px; font-size: 13px; color: #aaa; }
+        #edit-popup input, #edit-popup textarea {
+            width: 100%; box-sizing: border-box;
+            background: #0f0f1a; border: 1px solid #555; color: #fff;
+            padding: 8px; border-radius: 4px; font-size: 14px; margin-bottom: 14px;
+        }
+        #edit-popup textarea { resize: vertical; }
+        #edit-buttons { display: flex; justify-content: flex-end; gap: 10px; }
+        #edit-cancel {
+            padding: 8px 16px; border: 1px solid #555;
+            background: transparent; color: #aaa; border-radius: 4px; cursor: pointer;
+        }
+        #edit-save {
+            padding: 8px 16px; border: none;
+            background: #4a7cf7; color: #fff; border-radius: 4px; cursor: pointer;
+        }
     </style>
 </head>
+<div id="edit-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0;
+  background:rgba(0,0,0,0.55); z-index:1000; justify-content:center; align-items:center;">
+    <div id="edit-popup">
+        <h3>Edit Node</h3>
+        <label for="edit-label">Label</label>
+        <input id="edit-label" type="text" />
+        <label for="edit-description">Description</label>
+        <textarea id="edit-description" rows="4"></textarea>
+        <div id="edit-buttons">
+            <button id="edit-cancel">Cancel</button>
+            <button id="edit-save">Save</button>
+        </div>
+    </div>
+</div>
 <body onload="createDrawing()">
 <div id="options">
     <form>
