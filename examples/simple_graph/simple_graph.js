@@ -90,7 +90,7 @@ Drawing.SimpleGraph = function(options) {
     controls = new THREE.TrackballControls(camera);
 
     controls.rotateSpeed = 0.5;
-    controls.zoomSpeed = 5.2;
+    controls.zoomSpeed = 2.2;
     controls.panSpeed = 1;
 
     controls.noZoom = false;
@@ -207,11 +207,10 @@ Drawing.SimpleGraph = function(options) {
 
       drawNode(newNode);
       // Spawn it near the parent so the layout has a sensible starting point
-      var spread = .0005;
-      newNode.position.x = sourceNode.position.x + (Math.random() - 0.5) * spread;
-      newNode.position.y = sourceNode.position.y + (Math.random() - 0.5) * spread;
+      newNode.position.x = sourceNode.position.x;
+      newNode.position.y = sourceNode.position.y;
       if(that.layout === "3d") {
-          newNode.position.z = sourceNode.position.z + (Math.random() - 0.5) * spread;
+          newNode.position.z = sourceNode.position.z;
       }
 
 
@@ -311,28 +310,46 @@ Drawing.SimpleGraph = function(options) {
     }
 
 
+
     // Show labels if set
     // It creates the labels when this options is set during visualization
     if(that.show_labels) {
-      length = graph.nodes.length;
-      for(i=0; i<length; i++) {
-        node = graph.nodes[i];
-        if(node.data.label_object !== undefined) {
-          node.data.label_object.position.x = node.data.draw_object.position.x;
-          node.data.label_object.position.y = node.data.draw_object.position.y - 100;
-          node.data.label_object.position.z = node.data.draw_object.position.z;
-            node.data.label_object.quaternion.copy(camera.quaternion);
-        } else {
-          var label_object;
-          if(node.data.title !== undefined) {
-            label_object = new THREE.Label(node.data.title, node.data.draw_object);
-          } else {
-            label_object = new THREE.Label(node.id, node.data.draw_object);
-          }
-          node.data.label_object = label_object;
-          scene.add( node.data.label_object );
+        // Pass 1: min/max
+        var minDist = Infinity, maxDist = -Infinity;
+        for(i = 0; i < graph.nodes.length; i++) {
+            node = graph.nodes[i];
+            if(node.data.label_object && node.data.draw_object) {
+                var d = camera.position.distanceTo(node.data.draw_object.position);
+                if(d < minDist) minDist = d;
+                if(d > maxDist) maxDist = d;
+            }
         }
-      }
+        var range = maxDist - minDist || 1;
+
+        // Pass 2: position + billboard + color all in one
+        length = graph.nodes.length;
+        for(i = 0; i < length; i++) {
+            node = graph.nodes[i];
+            if(node.data.label_object !== undefined) {
+                node.data.label_object.position.x = node.data.draw_object.position.x;
+                node.data.label_object.position.y = node.data.draw_object.position.y - 100;
+                node.data.label_object.position.z = node.data.draw_object.position.z;
+                node.data.label_object.quaternion.copy(camera.quaternion);
+
+                var dist = camera.position.distanceTo(node.data.draw_object.position);
+                var t = (dist - minDist) / range;
+                node.data.label_object.material.opacity = 1.0 - (t * 0.7);
+            } else {
+                var label_object;
+                if (node.data.title !== undefined) {
+                    label_object = new THREE.Label(node.data.title, node.data.draw_object);
+                } else {
+                    label_object = new THREE.Label(node.id, node.data.draw_object);
+                }
+                node.data.label_object = label_object;
+                scene.add(node.data.label_object);
+            }
+        }
     } else {
       length = graph.nodes.length;
       for(i=0; i<length; i++) {
@@ -343,6 +360,7 @@ Drawing.SimpleGraph = function(options) {
         }
       }
     }
+
 
     // render selection
     object_selection.render(scene, camera);

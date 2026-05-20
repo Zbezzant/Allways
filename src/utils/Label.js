@@ -1,60 +1,59 @@
-/**
-  @author David Piegza
-
-  Implements a label for an object.
-
-  It creates an text in canvas and sets the text-canvas as
-  texture of a cube geometry.
-
-  Parameters:
-  text: <string>, text of the label
-
-  Example:
-  var label = new THREE.Label("Text of the label");
-  label.position.x = 100;
-  label.position.y = 100;
-  scene.addObject(label);
- */
-
 THREE.Label = function(text, parameters) {
-  parameters = parameters || {};
+    parameters = parameters || {};
+    var labelCanvas = document.createElement("canvas");
 
-  var labelCanvas = document.createElement( "canvas" );
+    function create() {
+        var xc = labelCanvas.getContext("2d");
+        var fontsize = parameters.fontSize || "40pt";
+        var fontFamily = parameters.fontFamily || "'OpenDyslexic', 'OpenDyslexicAlta', Arial, sans-serif";
+        var padding = 2;
 
-  function create() {
-    var xc = labelCanvas.getContext("2d");
-    var fontsize = "40pt";
+        xc.font = fontsize + " " + fontFamily;
+        var textWidth = xc.measureText(text).width;
 
-    // set font size to measure the text
-    xc.font = fontsize + " Arial";
-    var len = xc.measureText(text).width;
+        var cw = Math.ceil(textWidth) + padding * 2;
+        var ch = 60;
 
-    labelCanvas.setAttribute('width', len);
+        labelCanvas.setAttribute('width', cw);
+        labelCanvas.setAttribute('height', ch);
 
-    // set font size again cause it will be reset
-    // when setting a new width
-    xc.font = fontsize + " Arial";
-    xc.textBaseline = 'top';
-    xc.fillText(text, 0, 0);
+        xc.font = fontsize + " " + fontFamily;
+        xc.textBaseline = 'middle';
 
-    var geometry = new THREE.BoxGeometry(len, 200, 0);
-    var xm = new THREE.MeshBasicMaterial({
-      map: new THREE.CanvasTexture(
-        labelCanvas,
-        THREE.UVMapping,
-        THREE.ClampToEdgeWrapping,
-        THREE.ClampToEdgeWrapping,
-        THREE.LinearFilter,
-        THREE.LinearFilter
-      ),
-      transparent: true
-    });
-    xm.map.needsUpdate = true;
+        var r = 20;
+        xc.fillStyle = 'white';
+        xc.beginPath();
+        xc.moveTo(r, 0);
+        xc.lineTo(cw - r, 0);
+        xc.quadraticCurveTo(cw, 0, cw, r);
+        xc.lineTo(cw, ch - r);
+        xc.quadraticCurveTo(cw, ch, cw - r, ch);
+        xc.lineTo(r, ch);
+        xc.quadraticCurveTo(0, ch, 0, ch - r);
+        xc.lineTo(0, r);
+        xc.quadraticCurveTo(0, 0, r, 0);
+        xc.closePath();
+        xc.fill();
 
-    // set text canvas to cube geometry
-    var labelObject = new THREE.Mesh(geometry, xm);
-    return labelObject;
-  }
+        xc.fillStyle = 'black';
+        xc.fillText(text, padding, ch / 2);
 
-  return create();
+        var geometry = new THREE.BoxGeometry(cw, ch, 0);
+        var xm = new THREE.MeshBasicMaterial({
+            map: new THREE.CanvasTexture(
+                labelCanvas,
+                THREE.UVMapping,
+                THREE.ClampToEdgeWrapping,
+                THREE.ClampToEdgeWrapping,
+                THREE.LinearFilter,
+                THREE.LinearFilter
+            ),
+            transparent: true
+        });
+        xm.map.needsUpdate = true;
+
+        return new THREE.Mesh(geometry, xm);
+    }
+
+    return create();
 };

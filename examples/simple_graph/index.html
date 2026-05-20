@@ -8,65 +8,90 @@
       <script type="text/javascript" src="build/graph.min.js"></script>
     </head>
     <body onload="new Drawing.SimpleGraph({layout: '3d', showStats: true, showInfo: true})">
-    </bod>
+    </body>
   </html>
 -->
 <!DOCTYPE html>
 <html>
-  <head>
+<head>
     <meta charset="utf-8">
     <title>Graph Visualization</title>
     <script type="text/javascript" src="../../build/graph.min.js"></script>
     <script type="text/javascript" src="simple_graph.js"></script>
 
+    <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/opendyslexic">
+
+
     <script type="text/javascript">
-      var drawing;
-      function createDrawing() {
-        drawing = new Drawing.SimpleGraph({layout: '3d', selection: true, numNodes: 50, graphLayout:{attraction: 5, repulsion: 0.5}, showStats: true, showInfo: true});
-      }
+        var drawing;
+        function createDrawing() {
+            document.fonts.load('40pt OpenDyslexic').then(function() {
+                drawing = new Drawing.SimpleGraph({
+                    layout: '3d',
+                    selection: true,
+                    numNodes: 50,
+                    graphLayout: {attraction: 5, repulsion: 0.5},
+                    showStats: true,
+                    showInfo: true
+                });
+            }).catch(function(err) {
+                console.warn('OpenDyslexic failed to load, falling back to Arial:', err);
+                drawing = new Drawing.SimpleGraph({
+                    layout: '3d',
+                    selection: true,
+                    numNodes: 50,
+                    graphLayout: {attraction: 5, repulsion: 0.5},
+                    showStats: true,
+                    showInfo: true
+                });
+            });
+        }
     </script>
 
     <style type="text/css">
-      body {
-        margin: 0;
-        padding: 0;
-        font: 11px courier;
-        overflow: hidden;
-      }
-      #graph-info {
-        position: absolute;
-        top: 0px;
-        left: 40%;
-        margin: 10px;
-        background-color: #ffffe0;
-        color: #333;
-        padding: 5px 10px;
-      }
-      #options {
-        position: absolute;
-        top: 0;
-        right: 0;
-        z-index: 10;
-      }
+        body {
+            margin: 0;
+            padding: 0;
+            font: 11px courier;
+            overflow: hidden;
+        }
+        #options, #options label, #options input, #options button {
+            font-family: 'OpenDyslexic', 'OpenDyslexicAlta', Arial, sans-serif;
+        }
+        #graph-info {
+            position: absolute;
+            top: 0px;
+            left: 40%;
+            margin: 10px;
+            background-color: #ffffe0;
+            color: #333;
+            padding: 5px 10px;
+        }
+        #options {
+            position: absolute;
+            top: 0;
+            right: 0;
+            z-index: 10;
+        }
     </style>
-  </head>
-  <body onload="createDrawing()">
-    <div id="options">
-      <form>
+</head>
+<body onload="createDrawing()">
+<div id="options">
+    <form>
         <p>
-          <input type="checkbox" id="show_labels" onclick="drawing.show_labels = this.checked;">
-          <label for="show_labels">Show labels</label>
+            <input type="checkbox" id="show_labels" onclick="if(drawing) drawing.show_labels = this.checked;">
+            <label for="show_labels">Show labels</label>
         </p>
         <p>
-          <input type="button" value="Stop layout" onclick="drawing.stop_calculating();">
+            <input type="button" value="Stop layout" onclick="if(drawing) drawing.stop_calculating();">
         </p>
-      </form>
-    </div>
+    </form>
+</div>
 
-    <div style="position: absolute; bottom: 0;">
-      Rotate: Left Mouse Button and Move<br />
-      Zoom: Press Key S + Left Mouse Button and Move<br />
-      Drag: Press Key D + Left Mouse Button and Move
-    </div>
-  </body>
+<div style="position: absolute; bottom: 0;">
+    Rotate: Left Mouse Button and Move<br />
+    Zoom: Press Key S + Left Mouse Button and Move<br />
+    Drag: Press Key D + Left Mouse Button and Move
+</div>
+</body>
 </html>
