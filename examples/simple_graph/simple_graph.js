@@ -48,6 +48,7 @@
 
 var Drawing = Drawing || {};
 
+
 Drawing.SimpleGraph = function(options) {
   options = options || {};
 
@@ -65,6 +66,8 @@ Drawing.SimpleGraph = function(options) {
   var stats;
   var info_text = {};
   var graph = new GRAPHVIS.Graph({limit: options.limit});
+  var nodeMap = {};      // THREE mesh.id  →  GRAPHVIS.Node
+  var nextNodeId = 9999; // start high to avoid collisions with createGraph()
 
   var geometries = [];
 
@@ -110,21 +113,22 @@ Drawing.SimpleGraph = function(options) {
     }
 
     // Create node selection, if set
-    if(that.selection) {
       object_selection = new THREE.ObjectSelection({
-        domElement: renderer.domElement,
-        selected: function(obj) {
-          // display info
-          if(obj !== null) {
-            info_text.select = "Object " + obj.id;
-          } else {
-            delete info_text.select;
+          domElement: renderer.domElement,
+          selected: function(obj) {
+              if(obj !== null) {
+                  info_text.select = "Object " + obj.id;
+              } else {
+                  delete info_text.select;
+              }
+          },
+          clicked: function(obj) {
+              var sourceNode = nodeMap[obj.id];
+              if(sourceNode) {          // ignore clicks on labels/edges
+                  addNodeToGraph(sourceNode);
+              }
           }
-        },
-        clicked: function(obj) {
-        }
       });
-    }
 
     document.body.appendChild( renderer.domElement );
 
@@ -192,6 +196,36 @@ Drawing.SimpleGraph = function(options) {
     info_text.edges = "Edges " + graph.edges.length;
   }
 
+  /**
+  *  Create a node object and add it to the scene by clicking a currently existing node.
+  */
+  function addNodeToGraph(sourceNode) {
+      var newNode = new GRAPHVIS.Node(nextNodeId++);
+      newNode.data.title = "Node " + newNode.id;
+
+      if(!graph.addNode(newNode)) return; // duplicate ID guard
+
+      drawNode(newNode);
+      // Spawn it near the parent so the layout has a sensible starting point
+      var spread = .0005;
+      newNode.position.x = sourceNode.position.x + (Math.random() - 0.5) * spread;
+      newNode.position.y = sourceNode.position.y + (Math.random() - 0.5) * spread;
+      if(that.layout === "3d") {
+          newNode.position.z = sourceNode.position.z + (Math.random() - 0.5) * spread;
+      }
+
+
+      if(graph.addEdge(sourceNode, newNode)) {
+          drawEdge(sourceNode, newNode);
+      }
+
+      // Wake the layout back up so it repositions everyone
+      graph.layout.finished = false;
+      graph.layout.init();
+
+      info_text.nodes = "Nodes " + graph.nodes.length;
+      info_text.edges  = "Edges " + graph.edges.length;
+  }
 
   /**
    *  Create a node object and add it to the scene.
@@ -220,6 +254,7 @@ Drawing.SimpleGraph = function(options) {
 
     draw_object.id = node.id;
     node.data.draw_object = draw_object;
+    nodeMap[draw_object.id] = node;
     node.position = draw_object.position;
     scene.add( node.data.draw_object );
   }
@@ -286,7 +321,7 @@ Drawing.SimpleGraph = function(options) {
           node.data.label_object.position.x = node.data.draw_object.position.x;
           node.data.label_object.position.y = node.data.draw_object.position.y - 100;
           node.data.label_object.position.z = node.data.draw_object.position.z;
-          node.data.label_object.lookAt(camera.position);
+            node.data.label_object.quaternion.copy(camera.quaternion);
         } else {
           var label_object;
           if(node.data.title !== undefined) {
@@ -310,9 +345,7 @@ Drawing.SimpleGraph = function(options) {
     }
 
     // render selection
-    if(that.selection) {
-      object_selection.render(scene, camera);
-    }
+    object_selection.render(scene, camera);
 
     // update stats
     if(that.show_stats) {
