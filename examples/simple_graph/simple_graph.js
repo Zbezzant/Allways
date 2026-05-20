@@ -125,7 +125,7 @@ Drawing.SimpleGraph = function(options) {
               }
           },
           clicked: function(obj) {
-              var sourceNode = nodeMap[obj.id];
+              var sourceNode = obj._graphNode;
               if(sourceNode) {          // ignore clicks on labels/edges
                   addNodeToGraph(sourceNode);
               }
@@ -242,6 +242,7 @@ Drawing.SimpleGraph = function(options) {
         label_object = new THREE.Label(node.id, {fontFamily: that.label_font_family, fontSize: that.label_font_size});
       }
       node.data.label_object = label_object;
+      label_object._graphNode = node;
       scene.add( node.data.label_object );
     }
 
@@ -253,9 +254,8 @@ Drawing.SimpleGraph = function(options) {
       draw_object.position.z = Math.floor(Math.random() * (area + area + 1) - area);
     }
 
-    draw_object.id = node.id;
     node.data.draw_object = draw_object;
-    nodeMap[draw_object.id] = node;
+    draw_object._graphNode = node;
     node.position = draw_object.position;
     scene.add( node.data.draw_object );
   }
@@ -350,6 +350,7 @@ Drawing.SimpleGraph = function(options) {
                 }
                 node.data.label_object = label_object;
                 scene.add(node.data.label_object);
+                label_object._graphNode = node;
             }
         }
     } else {

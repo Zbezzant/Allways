@@ -17,6 +17,7 @@
                 var fontsize = parameters.fontSize || defaultFontSize;
                 var fontFamily = parameters.fontFamily || defaultFontFamily;
                 var padding = 2;
+                var topOffset = 6; // increase to push text down away from ceiling
                 var geometry = new THREE.BoxGeometry(1, 1, 0);
                 var texture = new THREE.CanvasTexture(
                     labelCanvas,
@@ -53,7 +54,7 @@
                     xc.closePath();
                     xc.fill();
                     xc.fillStyle = "black";
-                    xc.fillText(text, padding, ch / 2);
+                    xc.fillText(text, padding, ch / 2 + topOffset);
                     mesh.geometry.dispose();
                     mesh.geometry = new THREE.BoxGeometry(cw, ch, 0);
                     texture.needsUpdate = true;
